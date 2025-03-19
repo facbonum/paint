@@ -1,120 +1,104 @@
 import pygame
-import math
 
 pygame.init()
 
+# Screen properties
+WIDTH = 860
+HEIGHT = 600
+screen = pygame.display.set_mode([WIDTH, HEIGHT])
+pygame.display.set_caption("Paint!")
+
+# Brush state variables
+active_size = 20
+active_color = (0, 0, 0)  # Default to black
+painting = []  # List of painting data (color, position, size)
+
+# Initialize clock and FPS
 fps = 144
 timer = pygame.time.Clock()
-WIDTH = 800
-HEIGHT = 600
-active_size = 20
-active_color = 'white'
-screen = pygame.display.set_mode([WIDTH, HEIGHT], pygame.RESIZABLE)  # Make the window resizable
-pygame.display.set_caption("Paint!")
-painting = []
-last_pos = None  # Store the last mouse position to draw lines
+
+# Default canvas color
+canvas_color = (255, 255, 255)  # White canvas
+
+# Create canvas surface
+canvas = pygame.Surface((WIDTH, HEIGHT))
+canvas.fill(canvas_color)
 
 def draw_menu(size, color):
-    pygame.draw.rect(screen, 'gray', [0, 0, WIDTH, 70])
+    """Draw the brush sizes and color palette at the top."""
+    pygame.draw.rect(screen, 'gray', [0, 0, WIDTH, 70])  # Original height for menu bar
     pygame.draw.line(screen, 'black', (0, 70), (WIDTH, 70), 3)
 
-    # Define brush variables here
-    xl_brush = pygame.draw.rect(screen, 'black', [10, 10, 50, 50], 3)
-    pygame.draw.circle(screen, 'white', (35, 35), 20)
-
-    l_brush = pygame.draw.rect(screen, 'black', [70, 10, 50, 50], 3)
-    pygame.draw.circle(screen, 'white', (90, 35), 15)
-
-    m_brush = pygame.draw.rect(screen, 'black', [130, 10, 50, 50], 3)
-    pygame.draw.circle(screen, 'white', (166, 35), 10)
-
-    s_brush = pygame.draw.rect(screen, 'black', [190, 10, 50, 50], 3)
-    pygame.draw.circle(screen, 'white', (215, 35), 5)
-
-    xs_brush = pygame.draw.rect(screen, 'black', [250, 10, 50, 50], 3)
-    pygame.draw.circle(screen, 'white', (35, 35), 5)  # Slightly bigger brush for visibility
-
-    # Add brush size to the list
-    brush_list = [xl_brush, l_brush, m_brush, s_brush, xs_brush]
+    # Brush sizes
+    brush_sizes = [20, 15, 10, 5, 2]
+    for i, brush_size in enumerate(brush_sizes):
+        pygame.draw.rect(screen, 'black', [10 + (i * 60), 10, 50, 50], 3)
+        pygame.draw.circle(screen, 'white', (35 + (i * 60), 35), brush_size)
 
     # Active color circle
     pygame.draw.circle(screen, color, (400, 35), 30)
     pygame.draw.circle(screen, 'dark gray', (400, 35), 30, 3)
 
-    # Define color rectangles horizontally aligned
-    color_rects = [
-        pygame.draw.rect(screen, (0, 0, 255), [WIDTH - 295, 10, 25, 25]),  # Blue
-        pygame.draw.rect(screen, (255, 0, 0), [WIDTH - 260, 10, 25, 25]),  # Red
-        pygame.draw.rect(screen, (0, 255, 0), [WIDTH - 225, 10, 25, 25]),  # Green
-        pygame.draw.rect(screen, (255, 255, 0), [WIDTH - 190, 10, 25, 25]),  # Yellow
-        pygame.draw.rect(screen, (0, 255, 255), [WIDTH - 155, 10, 25, 25]),  # Teal
-        pygame.draw.rect(screen, (255, 0, 255), [WIDTH - 120, 10, 25, 25]),  # Purple
-        pygame.draw.rect(screen, (0, 0, 0), [WIDTH - 85, 10, 25, 25]),  # White
-        pygame.draw.rect(screen, (255, 255, 255), [WIDTH - 50, 10, 25, 25]),  # Black
-        pygame.draw.rect(screen, (139, 69, 19), [WIDTH - 35, 10, 25, 25]),  # Brown
-        pygame.draw.rect(screen, (255, 165, 0), [WIDTH - 35, 35, 25, 25]),  # Orange
-        pygame.draw.rect(screen, (255, 20, 147), [WIDTH - 35, 60, 25, 25]),  # Deep Pink
-        pygame.draw.rect(screen, (0, 128, 128), [WIDTH - 35, 85, 25, 25]),  # Teal (Darker)
-        pygame.draw.rect(screen, (255, 99, 71), [WIDTH - 35, 110, 25, 25]),  # Tomato Red
-    ]
+    # Primary color selection (arranged horizontally)
+    colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 255, 255), 
+              (255, 0, 255), (0, 0, 0), (255, 255, 255), (150, 0, 255), (170, 170, 100), (200, 140, 200)]
+    for i, color_rect in enumerate(colors):
+        pygame.draw.rect(screen, color_rect, [WIDTH - 380 + (i * 35), 10, 25, 25])
 
-    # Add color rects to the list
-    color_rect = color_rects
+    # Custom color selection (beneath the primary colors)
+    custom_colors = [(165, 42, 42), (255, 69, 0), (70, 170, 255), (255, 105, 180), 
+                     (255, 215, 0), (0, 128, 128), (128, 0, 128), (255, 20, 147), 
+                     (0, 100, 255), (90, 255, 200), (20, 0, 180)]
+    for i, color_rect in enumerate(custom_colors):
+        pygame.draw.rect(screen, color_rect, [WIDTH - 380 + (i * 35), 40, 25, 25])  # Placing below the primary colors
 
-    # Define RGB values for colors
-    rgb_list = [
-        (0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 255, 255), 
-        (255, 0, 255), (0, 0, 0), (255, 255, 255), (139, 69, 19), (255, 165, 0), 
-        (255, 20, 147), (0, 128, 128), (255, 99, 71)
-    ]
-
-    return brush_list, color_rect, rgb_list
+    return brush_sizes, colors, custom_colors
 
 def draw_painting(paints):
-    for i in range(len(paints)):
-        pygame.draw.circle(screen, paints[i][0], paints[i][1], paints[i][2])
-
-def draw_line_between_points(start, end, color, radius):
-    """Draw a line between two points to make the stroke more continuous."""
-    pygame.draw.line(screen, color, start, end, radius)
+    """Draw all the painted strokes on the canvas."""
+    for color, position, size in paints:
+        pygame.draw.circle(canvas, color, position, size)
 
 run = True
 while run:
     timer.tick(fps)
-    screen.fill('white')
+
+    # Handle window events
+    screen.fill('white')  # Fill the screen with the background color
+    screen.blit(canvas, (0, 0))  # Draw the canvas (painted strokes)
     mouse = pygame.mouse.get_pos()
     left_click = pygame.mouse.get_pressed()[0]
 
-    if left_click and mouse[1] > 70:
-        # If the left click is pressed, draw between the previous and current position
-        if last_pos:
-            # Draw line between last position and current position
-            draw_line_between_points(last_pos, mouse, active_color, active_size)
-        last_pos = mouse  # Update the last position for the next frame
-        painting.append((active_color, mouse, active_size))  # Append as a tuple
+    # Handle painting if the user clicks the mouse
+    if left_click and mouse[1] > 70:  # Only paint below the menu (70px is menu height)
+        painting.append((active_color, mouse, active_size))  # Append brush info to painting list
+        draw_painting(painting)  # Redraw painting strokes
 
-    draw_painting(painting)
+    # Brush size tracking cursor
+    if mouse[1] > 70:
+        pygame.draw.circle(screen, active_color, mouse, active_size)
 
-    if mouse[1] > 70:  # Brush size tracking cursor
-        pygame.draw.circle(screen, active_color, mouse, active_size)  # Draw active size cursor
-
-    brushes, colors, rgbs = draw_menu(active_size, active_color)
+    brush_sizes, colors, custom_colors = draw_menu(active_size, active_color)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            run = False  # Stop the game loop
+            run = False  # Quit the game loop
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            for i in range(len(brushes)):
-                if brushes[i].collidepoint(event.pos):
-                    active_size = 20 - (i * 5)  # Brush size selection logic
+            # Handle brush size selection
+            for i, brush_size in enumerate(brush_sizes):
+                if pygame.Rect(10 + (i * 60), 10, 50, 50).collidepoint(event.pos):
+                    active_size = brush_size  # Set active brush size
 
-            for i in range(len(colors)):
-                if colors[i].collidepoint(event.pos):
-                    active_color = rgbs[i]  # Color selection
+            # Handle primary color selection
+            for i, color_rect in enumerate(colors):
+                if pygame.Rect(WIDTH - 380 + (i * 35), 10, 25, 25).collidepoint(event.pos):
+                    active_color = color_rect  # Set active color
 
-    # Call draw_menu with correct arguments
-    draw_menu(active_size, active_color)
+            # Handle custom color selection (beneath primary colors)
+            for i, color_rect in enumerate(custom_colors):
+                if pygame.Rect(WIDTH - 380 + (i * 35), 40, 25, 25).collidepoint(event.pos):
+                    active_color = color_rect  # Set active custom color
 
     pygame.display.flip()
 
